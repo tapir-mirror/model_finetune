@@ -10,58 +10,76 @@ MiraStral enhances the base Mistral model by training it on high-quality therape
 - Structured therapeutic techniques
 - Safe and ethical interaction patterns
 
-## Why Fine-tune Mistral for Therapy?
+## Process Flow
 
-### Advantages of the Base Model
-- Mistral-7B-Instruct provides an excellent foundation due to:
-  - Strong reasoning capabilities
-  - Good context understanding
-  - Efficient performance for its size
-  - High-quality instruction following
+```mermaid
+graph TD
+    A[Input JSON Files] --> B[Data Preprocessing]
+    B --> C[File Tracking]
+    C --> D[Checkpoint Check]
+    D --> |No Checkpoint| E[Initialize Training]
+    D --> |Found Checkpoint| F[Resume Training]
+    E --> G[Training Loop]
+    F --> G
+    G --> |Every 100 Steps| H[Save Checkpoint]
+    G --> |51 Minutes| I[Graceful Stop]
+    G --> |Interrupt Signal| I
+    I --> J[Save Final State]
+    H --> G
+    J --> K[Output Model]
+```
 
-### Value of Therapeutic Fine-tuning
-1. **Enhanced Empathy**: Training on therapeutic conversations helps the model better recognize and respond to emotional cues
-2. **Tool Integration**: The model learns to effectively use tools while maintaining therapeutic rapport
-3. **Safety First**: Fine-tuning reinforces ethical boundaries and safety protocols
-4. **Structured Support**: Incorporates therapeutic frameworks while maintaining natural conversation flow
+## Detailed Process Breakdown
+
+### 1. Data Management
+- **Input Processing**: Handles JSON files from worker1, worker2, and worker3 directories
+- **File Tracking**: 
+  - Maintains a record of processed files in `processed_files.pkl`
+  - Prevents reprocessing of previously used data
+  - Enables incremental training on new data
+
+### 2. Checkpoint System
+- **Location**: All checkpoints stored in `/data/scratch/$USER/mira_finetune/`
+- **Types of Checkpoints**:
+  - Regular checkpoints every 100 steps
+  - Interruption checkpoint when stopped
+  - Final model state upon completion
+- **Auto-Resume**: Automatically detects and resumes from latest checkpoint
+
+### 3. Time Management
+- **Duration Control**: 
+  - Maximum runtime of 51 minutes
+  - Graceful shutdown procedure
+  - Preserves progress and state
+- **Signal Handling**:
+  - Catches interruption signals
+  - Ensures clean shutdown
+  - Saves progress before exit
+
+### 4. Training Process
+- **Initialization**:
+  - Model setup with 4-bit quantization
+  - LoRA configuration
+  - Tokenizer preparation
+- **Training Loop**:
+  - Gradient accumulation
+  - Regular checkpointing
+  - Progress monitoring
+- **Output**:
+  - Saved model weights
+  - Training logs
+  - Performance metrics
 
 ## Project Structure
 
 ```
 fine_tune/
-├── main.py              # Main fine-tuning script
+├── main.py              # Main fine-tuning script with timing control
 ├── fine_tune.py         # Model configuration
 ├── reformat_data.py     # Data preprocessing
 ├── run_finetune.sh      # HPC job script
 └── requirements.txt     # Dependencies
 ```
-
-## Pipeline Stages
-
-### 1. Data Preparation
-- Located in `reformat_data.py`
-- Processes conversation data from worker directories
-- Converts various formats to consistent JSONL structure
-- Handles tool calls and response formatting
-
-### 2. Model Configuration
-- Located in `fine_tune.py`
-- Sets up Mistral-7B-Instruct with 4-bit quantization
-- Configures tokenizer with special tokens
-- Optimizes for memory efficiency
-
-### 3. LoRA Fine-tuning
-- Implements Low-Rank Adaptation for efficient training
-- Preserves base model capabilities while adding therapeutic competencies
-- Focuses on key attention layers for optimal learning
-
-### 4. Training Process
-- Managed by `main.py`
-- Implements:
-  - Gradient accumulation for stability
-  - Learning rate scheduling
-  - Regular checkpointing
-  - Progress monitoring
 
 ## Output Structure
 
@@ -69,7 +87,8 @@ The fine-tuned model and training artifacts are saved in:
 ```
 /data/scratch/$USER/mira_finetune/
 ├── results/            # Training checkpoints and logs
-└── final_model/        # Final fine-tuned model
+├── final_model/        # Final fine-tuned model
+└── processed_files.pkl # Record of processed files
 ```
 
 ## Therapeutic Applications
@@ -96,19 +115,6 @@ MiraStral is designed to enhance therapeutic interactions by:
    - Uses reflection and validation
    - Maintains therapeutic alliance
 
-## Important Notes
-
-- This model is intended as a research tool and therapeutic aid, not a replacement for human therapists
-- All interactions should be monitored and supervised by qualified professionals
-- Regular evaluation of model outputs for safety and effectiveness is essential
-
-## Future Directions
-
-- Integration with more specialized therapeutic tools
-- Expansion of training data to cover more therapeutic approaches
-- Development of evaluation metrics for therapeutic effectiveness
-- Enhanced safety monitoring and intervention protocols
-
 ## Running the Fine-tuning
 
 1. Install dependencies:
@@ -120,6 +126,25 @@ pip install -r requirements.txt
 ```bash
 qsub run_finetune.sh
 ```
+
+### Training Continuation
+- If the job is interrupted, it will automatically resume from the latest checkpoint
+- New data files will be automatically included in subsequent training runs
+- Progress is tracked and saved every 100 steps
+
+## Important Notes
+
+- This model is intended as a research tool and therapeutic aid, not a replacement for human therapists
+- All interactions should be monitored and supervised by qualified professionals
+- Regular evaluation of model outputs for safety and effectiveness is essential
+- Training is automatically managed in 51-minute segments with state preservation
+
+## Future Directions
+
+- Integration with more specialized therapeutic tools
+- Expansion of training data to cover more therapeutic approaches
+- Development of evaluation metrics for therapeutic effectiveness
+- Enhanced safety monitoring and intervention protocols
 
 ## Acknowledgments
 

@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -j y
 #$ -pe smp 8        # 8 cores (8 cores per GPU)
-#$ -l h_rt=24:0:0   # 24 hour runtime for fine-tuning
+#$ -l h_rt=1:0:0   # 24 hour runtime for fine-tuning
 #$ -l h_vmem=11G    # 11 * 8 = 88G total RAM
 #$ -l gpu=1         # request 1 GPU
 
